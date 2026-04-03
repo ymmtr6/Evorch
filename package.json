@@ -1,0 +1,32 @@
+{
+  "name": "evorch",
+  "version": "0.1.0",
+  "description": "Event-driven orchestration CLI",
+  "type": "module",
+  "bin": {
+    "evorch": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "commander": "^13.0.0",
+    "croner": "^10.0.1",
+    "pino": "^10.3.1",
+    "pino-pretty": "^13.0.0",
+    "ulid": "^2.3.0",
+    "yaml": "^2.8.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  }
+}

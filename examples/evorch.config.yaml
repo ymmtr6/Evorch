@@ -1,0 +1,29 @@
+store:
+  path: "./evorch.db"
+
+log:
+  level: "info"
+
+jobs_dir: "./jobs"
+
+policies:
+  - name: "new-issues-to-claude"
+    match:
+      type: "new_issues_found"
+      severity: ["medium", "high"]
+    agent:
+      plugin: "claude-code"
+      config:
+        prompt_template: |
+          以下の新規issueを確認し、優先度と対応方針を提案してください:
+          {{payload}}
+        workdir: "/tmp/evorch-workdir"
+        timeout: 300
+
+execution:
+  max_concurrent: 3
+  default_timeout: 120
+  retry:
+    max_attempts: 2
+    backoff: "exponential"
+    initial_delay: 10

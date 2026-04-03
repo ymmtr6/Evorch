@@ -1,0 +1,20 @@
+# 毎日 09:00 に GitHub Issue を確認し、新規issueがあればイベントを発行する
+schedule: "0 9 * * *"
+timezone: "Asia/Tokyo"
+
+judge:
+  plugin: "shell"
+  config:
+    command: "gh issue list --repo owner/repo --state open --json number,title,labels,createdAt --limit 10"
+    timeout: 30
+
+event:
+  type: "new_issues_found"
+  severity: "medium"
+  labels:
+    repo: "owner/repo"
+    team: "platform"
+
+dedup:
+  fingerprint: "issues:owner/repo"
+  suppress_for: "8h"
