@@ -7,6 +7,7 @@ import { registerStatus } from "./status.js";
 import { registerHistory } from "./history.js";
 import { registerValidate } from "./validate.js";
 import { registerJob } from "./job.js";
+import { registerResults } from "./results.js";
 
 export const DEFAULT_CONFIG_DIR = join(homedir(), ".config", "evorch");
 export const DEFAULT_CONFIG_PATH = join(DEFAULT_CONFIG_DIR, "config.yaml");
@@ -28,6 +29,7 @@ export function createCli(): Command {
   registerHistory(program);
   registerValidate(program);
   registerJob(program);
+  registerResults(program);
 
   return program;
 }
