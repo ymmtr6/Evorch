@@ -225,6 +225,29 @@ agent:
 - `{{payload}}` はイベントのペイロード (JSON) に置換されます
 - `claude --print --output-format text` を実行
 
+### agent:shell
+
+シェルコマンドを実行します。
+
+```yaml
+agent:
+  plugin: "shell"
+  config:
+    command: "echo 'Event: {{event_type}}, Data: {{payload}}'"
+    workdir: "/path/to/workdir"
+    timeout: 60
+```
+
+**テンプレート変数:**
+
+| 変数 | 説明 |
+|---|---|
+| `{{event_id}}` | イベントID |
+| `{{event_type}}` | イベントタイプ |
+| `{{source}}` | イベントソース (ジョブ名) |
+| `{{payload}}` | ペイロード全体 (JSON) |
+| `{{payload.key}}` | ペイロード内の特定キー |
+
 ## 開発
 
 ```bash
