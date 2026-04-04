@@ -1,6 +1,7 @@
 import type { JudgePlugin, AgentPlugin, JudgeContext } from "./protocol.js";
 import type { JudgeResult, AgentResult, EvOrchEvent } from "../core/types.js";
 import { ShellJudge } from "./judges/shell.js";
+import { HttpJudge } from "./judges/http.js";
 import { ClaudeCodeAgent } from "./agents/claude-code.js";
 import { ShellAgent } from "./agents/shell.js";
 import { CodexAgent } from "./agents/codex.js";
@@ -8,6 +9,7 @@ import { NotifyAgent } from "./agents/notify.js";
 
 const BUILTIN_JUDGES: Record<string, () => JudgePlugin> = {
   shell: () => new ShellJudge(),
+  http: () => new HttpJudge(),
 };
 
 const BUILTIN_AGENTS: Record<string, () => AgentPlugin> = {
