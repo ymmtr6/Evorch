@@ -1,9 +1,16 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { Command } from "commander";
 import { registerRun } from "./run.js";
 import { registerOnce } from "./once.js";
 import { registerStatus } from "./status.js";
 import { registerHistory } from "./history.js";
 import { registerValidate } from "./validate.js";
+import { registerJob } from "./job.js";
+
+export const DEFAULT_CONFIG_DIR = join(homedir(), ".config", "evorch");
+export const DEFAULT_CONFIG_PATH = join(DEFAULT_CONFIG_DIR, "config.yaml");
+export const DEFAULT_JOBS_DIR = join(DEFAULT_CONFIG_DIR, "jobs");
 
 export function createCli(): Command {
   const program = new Command();
@@ -12,7 +19,7 @@ export function createCli(): Command {
     .name("evorch")
     .description("Event-driven orchestration CLI")
     .version("0.1.0")
-    .option("-c, --config <path>", "設定ファイルパス", "./evorch.config.yaml")
+    .option("-c, --config <path>", "設定ファイルパス", DEFAULT_CONFIG_PATH)
     .option("-v, --verbose", "詳細ログ出力");
 
   registerRun(program);
@@ -20,6 +27,7 @@ export function createCli(): Command {
   registerStatus(program);
   registerHistory(program);
   registerValidate(program);
+  registerJob(program);
 
   return program;
 }

@@ -38,39 +38,27 @@ git clone https://github.com/ymmtr6/Evorch.git
 cd Evorch
 npm install
 npm run build
+npm link  # evorch コマンドをグローバルに登録
 ```
 
 ## クイックスタート
 
-### 1. 設定ファイルを作成
+### 1. 初期化
 
-**evorch.config.yaml** (メイン設定):
-
-```yaml
-store:
-  path: "./evorch.db"
-
-log:
-  level: "info"
-
-jobs_dir: "./jobs"
-
-policies:
-  - name: "issues-to-claude"
-    match:
-      type: "new_issues_found"
-    agent:
-      plugin: "claude-code"
-      config:
-        prompt_template: |
-          以下のissueを分析してください:
-          {{payload}}
-        timeout: 300
+```bash
+# 設定ディレクトリとデフォルト設定を作成
+evorch job init
 ```
 
-**jobs/issue-checker.yaml** (ジョブ定義):
+設定は `~/.config/evorch/` に作成されます：
+- `config.yaml` - メイン設定
+- `jobs/` - ジョブ定義ファイル
 
-```yaml
+### 2. ジョブを登録
+
+```bash
+# ジョブファイルを作成
+cat > /tmp/my-job.yaml << 'EOF'
 schedule: "0 9 * * *"
 timezone: "Asia/Tokyo"
 
@@ -89,28 +77,56 @@ event:
 dedup:
   fingerprint: "issues:owner/repo"
   suppress_for: "8h"
+EOF
+
+# ジョブを登録
+evorch job add /tmp/my-job.yaml
+
+# 登録済みジョブ一覧
+evorch job list
+
+# ジョブを削除
+evorch job remove my-job
 ```
 
-### 2. 設定を検証
+### 3. ポリシーを設定
+
+**~/.config/evorch/config.yaml** にポリシーを追加:
+
+```yaml
+policies:
+  - name: "issues-to-claude"
+    match:
+      type: "new_issues_found"
+    agent:
+      plugin: "claude-code"
+      config:
+        prompt_template: |
+          以下のissueを分析してください:
+          {{payload}}
+        timeout: 300
+```
+
+### 4. 設定を検証
 
 ```bash
-npx evorch validate
+evorch validate
 ```
 
-### 3. 単発実行 (テスト用)
+### 5. 単発実行 (テスト用)
 
 ```bash
 # dry-run モード (judge まで、agent は実行しない)
-npx evorch once issue-checker --dry-run
+evorch once my-job --dry-run
 
 # 実際に実行
-npx evorch once issue-checker
+evorch once my-job
 ```
 
-### 4. デーモンモードで起動
+### 6. デーモンモードで起動
 
 ```bash
-npx evorch run
+evorch run
 ```
 
 ## CLI コマンド
@@ -122,17 +138,21 @@ npx evorch run
 | `evorch status` | 各ジョブの状態と次回実行時刻を表示 |
 | `evorch history [job]` | 実行履歴を表示 |
 | `evorch validate` | 設定ファイルの検証 |
+| `evorch job init` | 設定ディレクトリを初期化 |
+| `evorch job add <file>` | ジョブファイルを登録 |
+| `evorch job remove <name>` | ジョブを削除 |
+| `evorch job list` | 登録済みジョブ一覧を表示 |
 
 ### オプション
 
-- `-c, --config <path>`: 設定ファイルパス (デフォルト: `./evorch.config.yaml`)
+- `-c, --config <path>`: 設定ファイルパス (デフォルト: `~/.config/evorch/config.yaml`)
 - `-v, --verbose`: 詳細ログ出力
 - `--dry-run`: judge まで実行し、agent は実行しない (`once` コマンド用)
 - `--json`: JSON形式で出力 (`status`, `history` コマンド用)
 
 ## 設定リファレンス
 
-### メイン設定 (evorch.config.yaml)
+### メイン設定 (~/.config/evorch/config.yaml)
 
 | フィールド | 型 | デフォルト | 説明 |
 |---|---|---|---|
