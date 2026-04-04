@@ -18,10 +18,26 @@ const EventTemplateSchema = z.object({
   labels: z.record(z.string()).default({}),
 });
 
+const WebhookTriggerSchema = z.object({
+  type: z.literal("webhook"),
+  path: z.string(),
+  secret: z.string().optional(),
+});
+
+const ScheduleTriggerSchema = z.object({
+  type: z.literal("schedule").optional(),
+});
+
+const TriggerSchema = z.discriminatedUnion("type", [
+  WebhookTriggerSchema,
+  ScheduleTriggerSchema,
+]);
+
 /** ジョブ定義スキーマ（個別YAMLファイル用） */
 export const JobSchema = z.object({
-  schedule: z.string(),
+  schedule: z.string().optional(),
   timezone: z.string().optional(),
+  trigger: TriggerSchema.optional(),
   judge: JudgeConfigSchema,
   event: EventTemplateSchema,
   dedup: DedupSchema.optional(),

@@ -17,15 +17,18 @@ export function registerStatus(program: Command): void {
 
       const statuses = [];
       for (const [jobName, jobConfig] of Object.entries(config.jobs)) {
-        const cron = new Cron(jobConfig.schedule, {
-          timezone: jobConfig.timezone,
-        });
-        const nextRun = cron.nextRun();
+        let nextRun: Date | null = null;
+        if (jobConfig.schedule) {
+          const cron = new Cron(jobConfig.schedule, {
+            timezone: jobConfig.timezone,
+          });
+          nextRun = cron.nextRun();
+        }
         const lastRun = store.getLastRun(jobName);
 
         statuses.push({
           job: jobName,
-          schedule: jobConfig.schedule,
+          schedule: jobConfig.schedule || "webhook",
           next_run: nextRun?.toISOString() ?? "-",
           last_run: lastRun?.started_at ?? "-",
           last_status: lastRun?.status ?? "-",
