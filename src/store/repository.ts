@@ -147,6 +147,22 @@ export class Repository {
       .all(eventId) as AgentResultRow[];
     return rows.map(toAgentResult);
   }
+
+  getAgentResultById(resultId: string): AgentResult | null {
+    const row = this.db
+      .prepare(`SELECT * FROM agent_results WHERE result_id = ?`)
+      .get(resultId) as AgentResultRow | undefined;
+    return row ? toAgentResult(row) : null;
+  }
+
+  getRecentAgentResults(policyName?: string, limit: number = 20): AgentResult[] {
+    const query = policyName
+      ? `SELECT * FROM agent_results WHERE policy_name = ? ORDER BY started_at DESC LIMIT ?`
+      : `SELECT * FROM agent_results ORDER BY started_at DESC LIMIT ?`;
+    const params = policyName ? [policyName, limit] : [limit];
+    const rows = this.db.prepare(query).all(...params) as AgentResultRow[];
+    return rows.map(toAgentResult);
+  }
 }
 
 // --- 行 → 型変換 ---
