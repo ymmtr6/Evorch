@@ -1,0 +1,20 @@
+# デプロイ後のヘルスチェックと通知
+# 指定したエンドポイントのヘルスを監視し、異常時に通知
+
+schedule: "*/5 * * * *"  # 5分ごと
+timezone: "Asia/Tokyo"
+
+judge:
+  plugin: shell
+  config:
+    command: |
+      curl -sf ${HEALTH_ENDPOINT:-http://localhost:8080/health} -o /dev/null && echo "healthy" || echo "unhealthy"
+    timeout: 10
+
+event:
+  type: "health_check_failed"
+  severity: "high"
+
+dedup:
+  fingerprint: "health-check:${HEALTH_ENDPOINT}"
+  suppress_for: "30m"

@@ -7,7 +7,7 @@
     "evorch": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/templates/*.yaml dist/templates/",
     "dev": "tsx src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest"
