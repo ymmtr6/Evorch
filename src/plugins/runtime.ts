@@ -4,6 +4,7 @@ import { ShellJudge } from "./judges/shell.js";
 import { ClaudeCodeAgent } from "./agents/claude-code.js";
 import { ShellAgent } from "./agents/shell.js";
 import { CodexAgent } from "./agents/codex.js";
+import { NotifyAgent } from "./agents/notify.js";
 
 const BUILTIN_JUDGES: Record<string, () => JudgePlugin> = {
   shell: () => new ShellJudge(),
@@ -13,6 +14,7 @@ const BUILTIN_AGENTS: Record<string, () => AgentPlugin> = {
   "claude-code": () => new ClaudeCodeAgent(),
   shell: () => new ShellAgent(),
   codex: () => new CodexAgent(),
+  notify: () => new NotifyAgent(),
 };
 
 export class PluginRuntime {
