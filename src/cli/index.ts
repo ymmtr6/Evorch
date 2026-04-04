@@ -8,10 +8,12 @@ import { registerHistory } from "./history.js";
 import { registerValidate } from "./validate.js";
 import { registerJob } from "./job.js";
 import { registerResults } from "./results.js";
+import { registerStop } from "./stop.js";
 
 export const DEFAULT_CONFIG_DIR = join(homedir(), ".config", "evorch");
 export const DEFAULT_CONFIG_PATH = join(DEFAULT_CONFIG_DIR, "config.yaml");
 export const DEFAULT_JOBS_DIR = join(DEFAULT_CONFIG_DIR, "jobs");
+export const DEFAULT_PID_PATH = join(DEFAULT_CONFIG_DIR, "evorch.pid");
 
 export function createCli(): Command {
   const program = new Command();
@@ -30,6 +32,7 @@ export function createCli(): Command {
   registerValidate(program);
   registerJob(program);
   registerResults(program);
+  registerStop(program);
 
   return program;
 }
