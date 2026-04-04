@@ -248,6 +248,35 @@ agent:
 | `{{payload}}` | ペイロード全体 (JSON) |
 | `{{payload.key}}` | ペイロード内の特定キー |
 
+### agent:codex
+
+OpenAI Codex CLI を使用してタスクを実行します。
+
+```yaml
+agent:
+  plugin: "codex"
+  config:
+    prompt_template: |
+      以下の内容を分析してください:
+      {{payload}}
+    workdir: "/path/to/workdir"
+    timeout: 300
+    model: "o4-mini"
+    approval_mode: "suggest"
+```
+
+**設定パラメータ:**
+
+| パラメータ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `prompt_template` | string | `{{payload}}` | プロンプトテンプレート |
+| `workdir` | string | - | 作業ディレクトリ |
+| `timeout` | number | `300` | タイムアウト (秒) |
+| `model` | string | - | モデル名 (例: `o4-mini`, `gpt-4.1`) |
+| `approval_mode` | string | - | `suggest`, `auto-edit`, `full-auto` |
+
+**注意:** Codex CLI は別途インストールが必要です: `npm i -g @openai/codex`
+
 ## 開発
 
 ```bash

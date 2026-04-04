@@ -3,6 +3,7 @@ import type { JudgeResult, AgentResult, EvOrchEvent } from "../core/types.js";
 import { ShellJudge } from "./judges/shell.js";
 import { ClaudeCodeAgent } from "./agents/claude-code.js";
 import { ShellAgent } from "./agents/shell.js";
+import { CodexAgent } from "./agents/codex.js";
 
 const BUILTIN_JUDGES: Record<string, () => JudgePlugin> = {
   shell: () => new ShellJudge(),
@@ -11,6 +12,7 @@ const BUILTIN_JUDGES: Record<string, () => JudgePlugin> = {
 const BUILTIN_AGENTS: Record<string, () => AgentPlugin> = {
   "claude-code": () => new ClaudeCodeAgent(),
   shell: () => new ShellAgent(),
+  codex: () => new CodexAgent(),
 };
 
 export class PluginRuntime {
