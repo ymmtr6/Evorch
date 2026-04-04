@@ -1,3 +1,4 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import type { Command } from "commander";
 import { loadConfig } from "../config/loader.js";
 import { openDatabase } from "../store/database.js";
@@ -7,6 +8,7 @@ import { Executor } from "../core/executor.js";
 import { EventBus } from "../core/event-bus.js";
 import { PluginRuntime } from "../plugins/runtime.js";
 import { createLogger } from "../logger.js";
+import { DEFAULT_CONFIG_DIR, DEFAULT_PID_PATH } from "./index.js";
 
 export function registerRun(program: Command): void {
   program
@@ -27,6 +29,27 @@ export function registerRun(program: Command): void {
         onTick: (jobName) => executor.execute(jobName),
       }, logger);
 
+      // 二重起動チェック
+      if (existsSync(DEFAULT_PID_PATH)) {
+        const existingPid = parseInt(readFileSync(DEFAULT_PID_PATH, "utf-8").trim(), 10);
+        let isRunning = false;
+        try {
+          process.kill(existingPid, 0);
+          isRunning = true;
+        } catch {
+          logger.warn({ pid: existingPid }, "stale な PID ファイルを上書きします");
+        }
+        if (isRunning) {
+          logger.error({ pid: existingPid }, "evorch は既に起動中です");
+          process.exit(1);
+        }
+      }
+
+      // PID ファイル作成
+      mkdirSync(DEFAULT_CONFIG_DIR, { recursive: true });
+      writeFileSync(DEFAULT_PID_PATH, String(process.pid), "utf-8");
+      logger.info({ pid: process.pid, pidFile: DEFAULT_PID_PATH }, "PID ファイルを作成しました");
+
       const jobCount = Object.keys(config.jobs).length;
       logger.info({ jobs: jobCount }, "Evorch デーモン起動");
       scheduler.start();
@@ -36,6 +59,7 @@ export function registerRun(program: Command): void {
         logger.info("シャットダウン中...");
         scheduler.stop();
         db.close();
+        try { unlinkSync(DEFAULT_PID_PATH); } catch { /* 既に削除されている場合は無視 */ }
         process.exit(0);
       };
       process.on("SIGINT", shutdown);
