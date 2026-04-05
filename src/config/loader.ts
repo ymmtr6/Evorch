@@ -14,6 +14,7 @@ function getDefaultConfig(baseDir: string): Config {
     execution: {
       max_concurrent: 3,
       default_timeout: 120,
+      max_dispatch_depth: 10,
       retry: { max_attempts: 2, backoff: "exponential", initial_delay: 10 },
     },
   };

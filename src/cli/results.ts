@@ -62,7 +62,7 @@ function printList(results: AgentResult[], showOutput: boolean): void {
       padEnd(r.result_id, 28) +
         padEnd(r.policy_name, 24) +
         padEnd(r.agent_plugin, 16) +
-        padEnd(r.status, 10) +
+        padEnd(r.reason, 10) +
         padEnd(`${r.duration_ms}ms`, 10) +
         formatTime(r.started_at),
     );
@@ -79,7 +79,7 @@ function printDetail(r: AgentResult): void {
   console.log(`Event ID   : ${r.event_id}`);
   console.log(`Policy     : ${r.policy_name}`);
   console.log(`Plugin     : ${r.agent_plugin}`);
-  console.log(`Status     : ${r.status}`);
+  console.log(`Reason     : ${r.reason} (${r.outcome})`);
   console.log(`Duration   : ${r.duration_ms}ms`);
   console.log(`Started    : ${formatTime(r.started_at)}`);
   console.log(`Completed  : ${formatTime(r.completed_at)}`);

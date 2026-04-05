@@ -58,6 +58,7 @@ const RetrySchema = z.object({
 const ExecutionSchema = z.object({
   max_concurrent: z.number().default(3),
   default_timeout: z.number().default(120),
+  max_dispatch_depth: z.number().default(10),
   retry: RetrySchema.default({}),
 });
 

@@ -104,7 +104,8 @@ describe("Repository", () => {
       event_id: "evt-001",
       policy_name: "p",
       agent_plugin: "claude-code",
-      status: "success",
+      reason: "complete",
+      outcome: "ok",
       output: "test output",
       duration_ms: 100,
       started_at: "2026-04-04T00:00:00Z",
@@ -115,5 +116,7 @@ describe("Repository", () => {
     const results = repo.getAgentResults("evt-001");
     expect(results).toHaveLength(1);
     expect(results[0].output).toBe("test output");
+    expect(results[0].reason).toBe("complete");
+    expect(results[0].outcome).toBe("ok");
   });
 });

@@ -61,6 +61,14 @@ const MIGRATIONS: string[] = [
     applied_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   `,
+
+  // v2: agent_results に reason / outcome カラムを追加
+  `
+  ALTER TABLE agent_results ADD COLUMN reason TEXT;
+  ALTER TABLE agent_results ADD COLUMN outcome TEXT;
+  CREATE INDEX IF NOT EXISTS idx_agent_results_reason ON agent_results(reason);
+  CREATE INDEX IF NOT EXISTS idx_agent_results_outcome ON agent_results(outcome);
+  `,
 ];
 
 export function runMigrations(db: Database.Database): void {

@@ -22,7 +22,9 @@ export function registerRun(program: Command): void {
       const db = openDatabase(config.store.path);
       const store = new Repository(db);
       const pluginRuntime = new PluginRuntime();
-      const eventBus = new EventBus(config.policies, pluginRuntime, store, logger);
+      const eventBus = new EventBus(config.policies, pluginRuntime, store, logger, {
+        maxDispatchDepth: config.execution.max_dispatch_depth,
+      });
       const executor = new Executor(config, store, eventBus, pluginRuntime, logger);
 
       const scheduler = new Scheduler(config, {
