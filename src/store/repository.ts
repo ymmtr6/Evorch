@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
-import type { EvOrchEvent, RunRecord, AgentResult, RunStatus } from "../core/types.js";
+import type { EvOrchEvent, RunRecord, AgentResult, RunStatus, AgentEndReason, AgentOutcome } from "../core/types.js";
+import { reasonToOutcome } from "../core/types.js";
 
 export class Repository {
   constructor(private db: Database.Database) {}
@@ -125,15 +126,17 @@ export class Repository {
   recordAgentResult(result: AgentResult): void {
     this.db
       .prepare(
-        `INSERT INTO agent_results (result_id, event_id, policy_name, agent_plugin, status, output, duration_ms, started_at, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO agent_results (result_id, event_id, policy_name, agent_plugin, status, reason, outcome, output, duration_ms, started_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         result.result_id,
         result.event_id,
         result.policy_name,
         result.agent_plugin,
-        result.status,
+        reasonToLegacyStatus(result.reason),
+        result.reason,
+        result.outcome,
         result.output,
         result.duration_ms,
         result.started_at,
@@ -202,20 +205,37 @@ interface AgentResultRow {
   event_id: string;
   policy_name: string;
   agent_plugin: string;
-  status: string;
+  reason: string | null;
+  outcome: string | null;
   output: string | null;
   duration_ms: number | null;
   started_at: string;
   completed_at: string;
 }
 
+/** reason を旧 status カラムの許容値にマッピング（後方互換） */
+function reasonToLegacyStatus(reason: AgentEndReason): string {
+  switch (reason) {
+    case "complete":
+    case "skipped":
+    case "dedup":
+      return "success";
+    case "timeout":
+      return "timeout";
+    default:
+      return "failure";
+  }
+}
+
 function toAgentResult(row: AgentResultRow): AgentResult {
+  const reason = (row.reason ?? "complete") as AgentEndReason;
   return {
     result_id: row.result_id,
     event_id: row.event_id,
     policy_name: row.policy_name,
     agent_plugin: row.agent_plugin,
-    status: row.status as AgentResult["status"],
+    reason,
+    outcome: (row.outcome ?? reasonToOutcome(reason)) as AgentOutcome,
     output: row.output ?? "",
     duration_ms: row.duration_ms ?? 0,
     started_at: row.started_at,

@@ -74,8 +74,8 @@ describe("NotifyAgent", () => {
       event,
     );
 
-    // macOS では success、それ以外では failure
-    expect(["success", "failure"]).toContain(result.status);
+    // macOS では complete、それ以外では error
+    expect(["complete", "error"]).toContain(result.reason);
     expect(result.agent_plugin).toBe("notify");
   });
 });

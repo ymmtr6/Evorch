@@ -60,7 +60,7 @@ describe("CodexAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("failure");
+    expect(result.reason).toBe("error");
     expect(result.agent_plugin).toBe("codex");
   });
 });

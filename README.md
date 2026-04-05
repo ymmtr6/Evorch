@@ -24,6 +24,8 @@ Evorch は以下のフローを実現する CLI ツールです：
 - **ポリシーベースのルーティング**: イベントの属性に基づいてエージェントを振り分け
 - **重複抑止**: fingerprint による同一イベントの抑制
 - **SQLite による状態管理**: 実行履歴、イベント、重複抑止を永続化
+- **再帰ガード**: エージェントが連鎖的にイベントを発行してもループしない (dispatchDepth)
+- **詳細な終了理由**: エージェントの終了理由を `complete / error / timeout / killed / skipped / dedup` で記録
 
 ## インストール
 
@@ -129,8 +131,10 @@ evorch run
 |---|---|
 | `evorch run` | デーモンモードで全ジョブをスケジュール実行 |
 | `evorch once <job>` | 指定ジョブを1回だけ即時実行 |
+| `evorch stop` | バックグラウンドで動作中の `evorch run` を停止 |
 | `evorch status` | 各ジョブの状態と次回実行時刻を表示 |
 | `evorch history [job]` | 実行履歴を表示 |
+| `evorch results [policy-or-id]` | エージェント実行結果を表示 |
 | `evorch validate` | 設定ファイルの検証 |
 | `evorch job init` | 設定ディレクトリを初期化 |
 | `evorch job add <file>` | ジョブファイルを登録 |
@@ -156,6 +160,7 @@ evorch run
 | `policies` | array | `[]` | イベント → エージェントのルーティングポリシー |
 | `execution.max_concurrent` | number | `3` | 同時実行ジョブ数の上限 |
 | `execution.default_timeout` | number | `120` | デフォルトタイムアウト (秒) |
+| `execution.max_dispatch_depth` | number | `10` | イベント再帰発行の深度上限 (超過時は破棄) |
 
 ### ジョブ定義 (jobs/*.yaml)
 
@@ -270,6 +275,62 @@ agent:
 | `approval_mode` | string | - | `suggest`, `auto-edit`, `full-auto` |
 
 **注意:** Codex CLI は別途インストールが必要です: `npm i -g @openai/codex`
+
+### agent:notify
+
+macOS の通知センターへ通知を送ります。
+
+```yaml
+agent:
+  plugin: "notify"
+  config:
+    title: "Evorch アラート"
+    message: "{{event_type}} を検知しました"
+    subtitle: "source: {{source}}"
+    sound: "default"
+```
+
+**設定パラメータ:**
+
+| パラメータ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `title` | string | `Evorch` | 通知タイトル |
+| `message` | string | `{{event_type}} from {{source}}` | 通知本文 |
+| `subtitle` | string | - | サブタイトル |
+| `sound` | string | - | 通知音 (例: `default`, `Basso`) |
+
+**注意:** macOS 専用 (`osascript` を使用)。
+
+## エージェント実行結果
+
+エージェントの実行結果は `evorch results` で確認できます。
+
+```bash
+# 最近の結果を一覧表示
+evorch results
+
+# ポリシー名で絞り込み
+evorch results my-policy
+
+# RESULT ID を指定して詳細表示
+evorch results 01KNDVP5M65ESVB0AF8951TZ73
+
+# JSON形式で出力
+evorch results --json
+```
+
+### 終了理由 (reason) と終了状態 (outcome)
+
+各エージェント実行には `reason` (詳細な終了理由) と `outcome` (3分類の終了状態) が記録されます。
+
+| reason | outcome | 説明 |
+|---|---|---|
+| `complete` | `ok` | 正常終了 |
+| `error` | `error` | エラー終了 |
+| `timeout` | `error` | タイムアウト |
+| `killed` | `skipped` | 強制終了 (キャンセル) |
+| `skipped` | `skipped` | judge 不成立によるスキップ |
+| `dedup` | `skipped` | 重複抑止によるスキップ |
 
 ## 開発
 

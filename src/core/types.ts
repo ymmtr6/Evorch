@@ -7,6 +7,33 @@ export type RunStatus =
   | "skipped"
   | "timeout";
 
+/** エージェントの終了理由（詳細） */
+export type AgentEndReason =
+  | "complete" // 正常終了
+  | "error" // エラー終了
+  | "timeout" // タイムアウト
+  | "killed" // 強制終了（キャンセル）
+  | "skipped" // 条件不成立でスキップ
+  | "dedup"; // 重複抑止でスキップ
+
+/** エージェントの終了状態（3分類） */
+export type AgentOutcome = "ok" | "error" | "skipped";
+
+/** reason → outcome のマッピング */
+export function reasonToOutcome(reason: AgentEndReason): AgentOutcome {
+  switch (reason) {
+    case "complete":
+      return "ok";
+    case "error":
+    case "timeout":
+      return "error";
+    case "killed":
+    case "skipped":
+    case "dedup":
+      return "skipped";
+  }
+}
+
 /** システム全体で流れるイベント */
 export interface EvOrchEvent {
   event_id: string;
@@ -35,11 +62,17 @@ export interface AgentResult {
   event_id: string;
   policy_name: string;
   agent_plugin: string;
-  status: "success" | "failure" | "timeout";
+  reason: AgentEndReason;
+  outcome: AgentOutcome;
   output: string;
   duration_ms: number;
   started_at: string;
   completed_at: string;
+  stats?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    tool_calls?: number;
+  };
 }
 
 /** ジョブ実行記録 */

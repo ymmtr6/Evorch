@@ -24,7 +24,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("success");
+    expect(result.reason).toBe("complete");
     expect(result.agent_plugin).toBe("shell");
     expect(result.output.trim()).toBe("ok");
   });
@@ -36,7 +36,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("failure");
+    expect(result.reason).toBe("error");
   });
 
   it("テンプレート変数 {{event_type}} を展開する", async () => {
@@ -46,7 +46,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("success");
+    expect(result.reason).toBe("complete");
     expect(result.output.trim()).toBe("test_event");
   });
 
@@ -57,7 +57,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("success");
+    expect(result.reason).toBe("complete");
     expect(result.output.trim()).toBe("test-job");
   });
 
@@ -68,7 +68,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("success");
+    expect(result.reason).toBe("complete");
     expect(result.output.trim()).toBe("test-event-001");
   });
 
@@ -79,7 +79,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("success");
+    expect(result.reason).toBe("complete");
     expect(JSON.parse(result.output.trim())).toEqual({ count: 3, name: "test" });
   });
 
@@ -90,7 +90,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("success");
+    expect(result.reason).toBe("complete");
     expect(result.output.trim()).toBe("hello world");
   });
 
@@ -101,7 +101,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("timeout");
+    expect(result.reason).toBe("timeout");
   });
 
   it("workdir を指定して実行できる", async () => {
@@ -111,7 +111,7 @@ describe("ShellAgent", () => {
       event,
     );
 
-    expect(result.status).toBe("success");
+    expect(result.reason).toBe("complete");
     // macOS では /tmp は /private/tmp へのシンボリックリンク
     expect(result.output.trim()).toMatch(/\/tmp$/);
   });
