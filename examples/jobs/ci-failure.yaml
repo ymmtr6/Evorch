@@ -1,0 +1,23 @@
+# 10 分ごとに CI の失敗を確認し、失敗があれば codex で修正を試みる
+# judge: gh コマンドで直近の失敗ランを取得
+# agent: evorch.config.yaml の "ci-failure-to-codex" ポリシーが codex を起動
+schedule: "*/10 * * * *"
+timezone: "Asia/Tokyo"
+
+judge:
+  plugin: "shell"
+  config:
+    # 直近 5 件のワークフロー実行から失敗したものを取得
+    # 失敗なしなら空配列 → fired=false
+    command: "gh run list --repo owner/repo --status failure --limit 5 --json databaseId,name,conclusion,url"
+    timeout: 30
+
+event:
+  type: "ci_failed"
+  severity: "high"
+  labels:
+    repo: "owner/repo"
+
+dedup:
+  fingerprint: "ci-failure:owner/repo"
+  suppress_for: "1h"
