@@ -20,11 +20,13 @@ export function registerValidate(program: Command): void {
 
         // cron式の検証
         for (const [name, job] of Object.entries(config.jobs)) {
-          try {
-            new Cron(job.schedule);
-          } catch (err) {
-            console.error(`✗ ジョブ "${name}" のcron式が不正です: ${job.schedule}`);
-            process.exit(1);
+          if (job.schedule) {
+            try {
+              new Cron(job.schedule);
+            } catch (err) {
+              console.error(`✗ ジョブ "${name}" のcron式が不正です: ${job.schedule}`);
+              process.exit(1);
+            }
           }
         }
 
@@ -32,7 +34,8 @@ export function registerValidate(program: Command): void {
         console.log(`✓ ジョブ数: ${jobNames.length}`);
         for (const name of jobNames) {
           const job = config.jobs[name];
-          console.log(`  - ${name} (${job.schedule}) judge:${job.judge.plugin}`);
+          const trigger = job.schedule || "webhook";
+          console.log(`  - ${name} (${trigger}) judge:${job.judge.plugin}`);
         }
         console.log(`✓ ポリシー数: ${config.policies.length}`);
         for (const p of config.policies) {

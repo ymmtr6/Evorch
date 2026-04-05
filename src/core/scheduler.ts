@@ -17,6 +17,12 @@ export class Scheduler {
 
   start(): void {
     for (const [jobName, jobConfig] of Object.entries(this.config.jobs)) {
+      // webhook トリガーのジョブはスケジュールしない
+      if (!jobConfig.schedule) {
+        this.logger.info({ job: jobName }, "スケジュールなし（Webhook トリガー）");
+        continue;
+      }
+
       const cron = new Cron(
         jobConfig.schedule,
         { timezone: jobConfig.timezone, protect: true },

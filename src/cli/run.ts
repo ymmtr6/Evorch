@@ -6,15 +6,21 @@ import { Repository } from "../store/repository.js";
 import { Scheduler } from "../core/scheduler.js";
 import { Executor } from "../core/executor.js";
 import { EventBus } from "../core/event-bus.js";
+import { WebhookServer } from "../core/webhook-server.js";
 import { PluginRuntime } from "../plugins/runtime.js";
 import { createLogger } from "../logger.js";
 import { DEFAULT_CONFIG_DIR, DEFAULT_PID_PATH } from "./index.js";
+
+interface RunOptions {
+  webhookPort?: number;
+}
 
 export function registerRun(program: Command): void {
   program
     .command("run")
     .description("デーモンモードで全ジョブをスケジュール実行")
-    .action(async (_opts, cmd) => {
+    .option("--webhook-port <port>", "Webhook サーバーのポート番号", parseInt)
+    .action(async (opts: RunOptions, cmd) => {
       const globalOpts = cmd.optsWithGlobals();
       const config = loadConfig(globalOpts.config);
       const logger = createLogger(globalOpts.verbose ? "debug" : config.log.level);
@@ -28,6 +34,12 @@ export function registerRun(program: Command): void {
       const scheduler = new Scheduler(config, {
         onTick: (jobName) => executor.execute(jobName),
       }, logger);
+
+      // Webhook サーバー初期化
+      let webhookServer: WebhookServer | null = null;
+      if (opts.webhookPort) {
+        webhookServer = new WebhookServer(config, executor, logger);
+      }
 
       // 二重起動チェック
       if (existsSync(DEFAULT_PID_PATH)) {
@@ -54,10 +66,18 @@ export function registerRun(program: Command): void {
       logger.info({ jobs: jobCount }, "Evorch デーモン起動");
       scheduler.start();
 
+      // Webhook サーバー起動
+      if (webhookServer && opts.webhookPort) {
+        webhookServer.start(opts.webhookPort);
+      }
+
       // Graceful shutdown
       const shutdown = () => {
         logger.info("シャットダウン中...");
         scheduler.stop();
+        if (webhookServer) {
+          webhookServer.stop();
+        }
         db.close();
         try { unlinkSync(DEFAULT_PID_PATH); } catch { /* 既に削除されている場合は無視 */ }
         process.exit(0);
