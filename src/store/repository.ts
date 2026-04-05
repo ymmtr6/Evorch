@@ -1,9 +1,9 @@
-import type Database from "better-sqlite3";
+import type { DatabaseSync } from "node:sqlite";
 import type { EvOrchEvent, RunRecord, AgentResult, RunStatus, AgentEndReason, AgentOutcome } from "../core/types.js";
 import { reasonToOutcome } from "../core/types.js";
 
 export class Repository {
-  constructor(private db: Database.Database) {}
+  constructor(private db: DatabaseSync) {}
 
   // --- 実行履歴 ---
 
@@ -51,7 +51,7 @@ export class Repository {
       ? `SELECT * FROM runs WHERE job_name = ? ORDER BY started_at DESC LIMIT ?`
       : `SELECT * FROM runs ORDER BY started_at DESC LIMIT ?`;
     const params = jobName ? [jobName, limit] : [limit];
-    const rows = this.db.prepare(query).all(...params) as RunRow[];
+    const rows = this.db.prepare(query).all(...params) as unknown as RunRow[];
     return rows.map(toRunRecord);
   }
 
@@ -60,14 +60,14 @@ export class Repository {
       .prepare(
         `SELECT * FROM runs WHERE job_name = ? ORDER BY started_at DESC LIMIT 1`,
       )
-      .get(jobName) as RunRow | undefined;
+      .get(jobName) as unknown as RunRow | undefined;
     return row ? toRunRecord(row) : null;
   }
 
   getActiveRuns(): RunRecord[] {
     const rows = this.db
       .prepare(`SELECT * FROM runs WHERE status = 'running'`)
-      .all() as RunRow[];
+      .all() as unknown as RunRow[];
     return rows.map(toRunRecord);
   }
 
@@ -100,7 +100,7 @@ export class Repository {
       .prepare(
         `SELECT * FROM fingerprints WHERE fingerprint = ? AND expires_at > ?`,
       )
-      .get(fingerprint, now) as { fingerprint: string } | undefined;
+      .get(fingerprint, now) as unknown as { fingerprint: string } | undefined;
     return row != null;
   }
 
@@ -147,14 +147,14 @@ export class Repository {
   getAgentResults(eventId: string): AgentResult[] {
     const rows = this.db
       .prepare(`SELECT * FROM agent_results WHERE event_id = ?`)
-      .all(eventId) as AgentResultRow[];
+      .all(eventId) as unknown as AgentResultRow[];
     return rows.map(toAgentResult);
   }
 
   getAgentResultById(resultId: string): AgentResult | null {
     const row = this.db
       .prepare(`SELECT * FROM agent_results WHERE result_id = ?`)
-      .get(resultId) as AgentResultRow | undefined;
+      .get(resultId) as unknown as AgentResultRow | undefined;
     return row ? toAgentResult(row) : null;
   }
 
@@ -163,7 +163,7 @@ export class Repository {
       ? `SELECT * FROM agent_results WHERE policy_name = ? ORDER BY started_at DESC LIMIT ?`
       : `SELECT * FROM agent_results ORDER BY started_at DESC LIMIT ?`;
     const params = policyName ? [policyName, limit] : [limit];
-    const rows = this.db.prepare(query).all(...params) as AgentResultRow[];
+    const rows = this.db.prepare(query).all(...params) as unknown as AgentResultRow[];
     return rows.map(toAgentResult);
   }
 }

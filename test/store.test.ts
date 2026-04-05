@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { runMigrations } from "../src/store/migrations.js";
 import { Repository } from "../src/store/repository.js";
 import type { RunRecord, EvOrchEvent, AgentResult } from "../src/core/types.js";
 
-let db: Database.Database;
+let db: DatabaseSync;
 let repo: Repository;
 
 beforeEach(() => {
-  db = new Database(":memory:");
-  db.pragma("foreign_keys = ON");
+  db = new DatabaseSync(":memory:");
+  db.exec("PRAGMA foreign_keys = ON");
   runMigrations(db);
   repo = new Repository(db);
 });
