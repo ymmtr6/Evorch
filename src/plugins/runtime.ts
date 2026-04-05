@@ -5,6 +5,9 @@ import { ClaudeCodeAgent } from "./agents/claude-code.js";
 import { ShellAgent } from "./agents/shell.js";
 import { CodexAgent } from "./agents/codex.js";
 import { NotifyAgent } from "./agents/notify.js";
+import { GitHubAgent } from "./agents/github.js";
+import { SlackAgent } from "./agents/slack.js";
+import { HttpAgent } from "./agents/http.js";
 
 const BUILTIN_JUDGES: Record<string, () => JudgePlugin> = {
   shell: () => new ShellJudge(),
@@ -15,6 +18,9 @@ const BUILTIN_AGENTS: Record<string, () => AgentPlugin> = {
   shell: () => new ShellAgent(),
   codex: () => new CodexAgent(),
   notify: () => new NotifyAgent(),
+  github: () => new GitHubAgent(),
+  slack: () => new SlackAgent(),
+  http: () => new HttpAgent(),
 };
 
 export class PluginRuntime {
