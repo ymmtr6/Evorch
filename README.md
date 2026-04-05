@@ -15,12 +15,28 @@ Evorch は以下のフローを実現する CLI ツールです：
 │  Scheduler  │ ──▶ │    Judge    │ ──────────────▶ │  EventBus   │ ──▶ │    Agent    │
 │   (cron)    │     │   (shell)   │                 │  (policy)   │     │ (Claude)    │
 └─────────────┘     └─────────────┘                 └─────────────┘     └─────────────┘
+       ▲                   ▲                                ▲
+       │                   │                                │
+  jobs/*.yaml         jobs/*.yaml                   policies/*.yaml
+```
+
+設定ファイルはジョブ・ポリシーともにディレクトリ分割して管理できます：
+
+```
+~/.config/evorch/
+├── config.yaml          # ストア・ログ・実行設定
+├── jobs/                # ジョブ定義 (ファイル名 = ジョブ名)
+│   ├── check-issues.yaml
+│   └── daily-report.yaml
+└── policies/            # ポリシー定義 (ファイル名 = ポリシー名)
+    ├── issues-to-claude.yaml
+    └── alert-notify.yaml
 ```
 
 ## 特徴
 
 - **判定と実行の分離**: 条件判定 (judge) とアクション実行 (agent) を完全に分離
-- **ファイル分割されたジョブ定義**: ジョブごとに YAML ファイルを分割して管理
+- **ファイル分割されたジョブ・ポリシー定義**: jobs / policies ディレクトリで個別管理
 - **ポリシーベースのルーティング**: イベントの属性に基づいてエージェントを振り分け
 - **重複抑止**: fingerprint による同一イベントの抑制
 - **SQLite による状態管理**: 実行履歴、イベント、重複抑止を永続化
@@ -46,18 +62,26 @@ npm run build
 npm link  # evorch コマンドをグローバルに登録
 ```
 
+**必要な Node.js バージョン:** v22.5.0 以上
+
 ## クイックスタート
 
 ### 1. 初期化
 
 ```bash
-# 設定ディレクトリとデフォルト設定を作成
-evorch job init
+evorch init
 ```
 
-設定は `~/.config/evorch/` に作成されます：
-- `config.yaml` - メイン設定
-- `jobs/` - ジョブ定義ファイル
+以下のファイルが `~/.config/evorch/` に作成されます：
+
+```
+~/.config/evorch/
+├── config.yaml                    # メイン設定
+├── jobs/
+│   └── example.yaml               # サンプルジョブ
+└── policies/
+    └── on-example-event.yaml      # サンプルポリシー
+```
 
 ### 2. ジョブを登録
 
@@ -96,7 +120,25 @@ evorch job remove my-job
 
 ### 3. ポリシーを設定
 
-**~/.config/evorch/config.yaml** にポリシーを追加:
+ポリシーはファイルに分割して管理することを推奨します。ファイル名がポリシー名になります。
+
+```bash
+# ポリシーファイルを作成
+cat > ~/.config/evorch/policies/issues-to-claude.yaml << 'EOF'
+match:
+  type: "new_issues_found"
+
+agent:
+  plugin: "claude-code"
+  config:
+    prompt_template: |
+      以下のissueを分析してください:
+      {{payload}}
+    timeout: 300
+EOF
+```
+
+または `~/.config/evorch/config.yaml` にインラインで記述することもできます：
 
 ```yaml
 policies:
@@ -111,6 +153,8 @@ policies:
           {{payload}}
         timeout: 300
 ```
+
+> **優先順位**: 同名のポリシーが `policies_dir` とインライン定義の両方に存在する場合、`policies_dir` が優先されます。
 
 ### 4. 設定を検証
 
@@ -138,6 +182,7 @@ evorch run
 
 | コマンド | 説明 |
 |---|---|
+| `evorch init` | 設定ディレクトリを初期化 (config.yaml / jobs / policies を生成) |
 | `evorch run` | デーモンモードで全ジョブをスケジュール実行 |
 | `evorch once <job>` | 指定ジョブを1回だけ即時実行 |
 | `evorch stop` | バックグラウンドで動作中の `evorch run` を停止 |
@@ -145,7 +190,6 @@ evorch run
 | `evorch history [job]` | 実行履歴を表示 |
 | `evorch results [policy-or-id]` | エージェント実行結果を表示 |
 | `evorch validate` | 設定ファイルの検証 |
-| `evorch job init` | 設定ディレクトリを初期化 |
 | `evorch job add <file>` | ジョブファイルを登録 |
 | `evorch job remove <name>` | ジョブを削除 |
 | `evorch job list` | 登録済みジョブ一覧を表示 |
@@ -156,6 +200,7 @@ evorch run
 - `-v, --verbose`: 詳細ログ出力
 - `--dry-run`: judge まで実行し、agent は実行しない (`once` コマンド用)
 - `--json`: JSON形式で出力 (`status`, `history` コマンド用)
+- `--force`: 既存ファイルを上書き (`init` コマンド用)
 
 ## 設定リファレンス
 
@@ -166,7 +211,8 @@ evorch run
 | `store.path` | string | `./evorch.db` | SQLite データベースのパス |
 | `log.level` | string | `info` | ログレベル (`debug`, `info`, `warn`, `error`) |
 | `jobs_dir` | string | `./jobs` | ジョブ定義ファイルのディレクトリ |
-| `policies` | array | `[]` | イベント → エージェントのルーティングポリシー |
+| `policies_dir` | string | `./policies` | ポリシー定義ファイルのディレクトリ |
+| `policies` | array | `[]` | インラインのポリシー定義 (`policies_dir` と併用可) |
 | `execution.max_concurrent` | number | `3` | 同時実行ジョブ数の上限 |
 | `execution.default_timeout` | number | `120` | デフォルトタイムアウト (秒) |
 | `execution.max_dispatch_depth` | number | `10` | イベント再帰発行の深度上限 (超過時は破棄) |
@@ -185,16 +231,31 @@ evorch run
 | `dedup.fingerprint` | string | | 重複抑止用のフィンガープリント |
 | `dedup.suppress_for` | string | | 抑止期間 (例: `1h`, `30m`) |
 
-### ポリシー定義
+### ポリシー定義 (policies/*.yaml)
+
+ファイル分割する場合は `name` フィールドが不要です（ファイル名がポリシー名になります）。
 
 | フィールド | 型 | 説明 |
 |---|---|---|
-| `name` | string | ポリシー名 |
 | `match.type` | string | イベントタイプでフィルタ |
 | `match.severity` | string/array | 重要度でフィルタ (OR条件) |
 | `match.labels` | object | ラベルでフィルタ (AND条件) |
 | `agent.plugin` | string | エージェントプラグイン名 |
 | `agent.config` | object | プラグイン固有の設定 |
+
+インラインで定義する場合は `name` フィールドが必要です：
+
+```yaml
+# config.yaml 内のインライン定義
+policies:
+  - name: "my-policy"   # インライン定義では name が必須
+    match:
+      type: "my_event"
+    agent:
+      plugin: "shell"
+      config:
+        command: "echo triggered"
+```
 
 ## ビルトインプラグイン
 
