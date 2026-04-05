@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { DatabaseSync } from "node:sqlite";
 
 const MIGRATIONS: string[] = [
   // v1: 初期スキーマ
@@ -71,21 +71,19 @@ const MIGRATIONS: string[] = [
   `,
 ];
 
-export function runMigrations(db: Database.Database): void {
+export function runMigrations(db: DatabaseSync): void {
   // schema_version テーブルがなければ作成
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS schema_version (
+  db.exec(
+    `CREATE TABLE IF NOT EXISTS schema_version (
       version    INTEGER PRIMARY KEY,
       applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
+    )`,
+  );
 
   const currentVersion =
-    (
-      db.prepare("SELECT MAX(version) as v FROM schema_version").get() as {
-        v: number | null;
-      }
-    )?.v ?? 0;
+    (db.prepare("SELECT MAX(version) as v FROM schema_version").get() as {
+      v: number | null;
+    })?.v ?? 0;
 
   for (let i = currentVersion; i < MIGRATIONS.length; i++) {
     db.exec(MIGRATIONS[i]);

@@ -3,17 +3,19 @@
   "version": "0.1.2",
   "description": "Event-driven orchestration CLI",
   "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "bin": {
     "evorch": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "NODE_OPTIONS='--experimental-sqlite' vitest run",
+    "test:watch": "NODE_OPTIONS='--experimental-sqlite' vitest"
   },
   "dependencies": {
-    "better-sqlite3": "^12.8.0",
     "commander": "^13.0.0",
     "croner": "^10.0.1",
     "pino": "^10.3.1",
@@ -23,7 +25,6 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.8.0",
