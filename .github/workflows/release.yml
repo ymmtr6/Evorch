@@ -77,3 +77,22 @@ jobs:
             evorch-*.tar.gz
             evorch-*.sha256
           generate_release_notes: true
+
+      - name: SHA256 値を抽出
+        id: sha256
+        run: |
+          echo "arm64=$(awk '{print $1}' evorch-*-darwin-arm64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+          echo "x86_64=$(awk '{print $1}' evorch-*-darwin-x86_64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+
+      - name: homebrew-evorch に dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          repository: ymmtr6/homebrew-evorch
+          event-type: evorch-release
+          client-payload: |
+            {
+              "version": "${{ github.ref_name }}",
+              "arm64_sha256": "${{ steps.sha256.outputs.arm64 }}",
+              "x86_64_sha256": "${{ steps.sha256.outputs.x86_64 }}"
+            }
