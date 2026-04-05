@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+          - os: macos-13
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: ビルドと依存インストール
+        run: |
+          npm ci
+          npm run build
+          npm prune --omit=dev
+
+      - name: アーカイブ作成
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ARCHIVE="evorch-${VERSION}-darwin-${{ matrix.arch }}.tar.gz"
+          tar -czf "${ARCHIVE}" dist node_modules package.json
+          SHA256=$(shasum -a 256 "${ARCHIVE}" | cut -d' ' -f1)
+          echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_ENV
+          echo "SHA256=${SHA256}" >> $GITHUB_ENV
+          echo "${SHA256}  ${ARCHIVE}" > "${ARCHIVE}.sha256"
+          echo "### darwin-${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
+          echo "SHA256: \`${SHA256}\`" >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: evorch-darwin-${{ matrix.arch }}
+          path: |
+            ${{ env.ARCHIVE }}
+            ${{ env.ARCHIVE }}.sha256
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: SHA256 サマリー出力
+        run: |
+          echo "## Release Assets" >> $GITHUB_STEP_SUMMARY
+          for f in *.sha256; do
+            echo "- $(cat $f)" >> $GITHUB_STEP_SUMMARY
+          done
+
+      - name: GitHub Release 作成
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            evorch-*.tar.gz
+            evorch-*.sha256
+          generate_release_notes: true

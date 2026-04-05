@@ -29,6 +29,15 @@ Evorch は以下のフローを実現する CLI ツールです：
 
 ## インストール
 
+### Homebrew (推奨)
+
+```bash
+brew tap ymmtr6/evorch
+brew install evorch
+```
+
+### ソースから
+
 ```bash
 git clone https://github.com/ymmtr6/Evorch.git
 cd Evorch
