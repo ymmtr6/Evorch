@@ -1,0 +1,28 @@
+# 毎時 0 分にアプリログを集計し、エラーがあればイベントを発行する
+# judge: shell でエラー行をカウント
+# agent: evorch.config.yaml の "log-summary-to-file" ポリシーが shell を起動
+schedule: "0 * * * *"
+
+judge:
+  plugin: "shell"
+  config:
+    # 直近 1 時間のエラーログを集計して JSON を出力
+    # エラーなしなら exit 1 (fired=false)
+    command: |
+      count=$(grep -c "ERROR" /var/log/app.log 2>/dev/null || echo 0)
+      if [ "$count" -gt 0 ]; then
+        echo "{\"error_count\": $count, \"log_file\": \"/var/log/app.log\"}"
+      else
+        exit 1
+      fi
+    timeout: 15
+
+event:
+  type: "log_summary_ready"
+  severity: "low"
+  labels:
+    service: "app"
+
+dedup:
+  fingerprint: "log-summary:app"
+  suppress_for: "55m"

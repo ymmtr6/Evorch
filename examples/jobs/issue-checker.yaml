@@ -1,10 +1,13 @@
-# 毎日 09:00 に GitHub Issue を確認し、新規issueがあればイベントを発行する
+# 毎日 09:00 に GitHub Issue を確認し、新規 issue があればイベントを発行する
+# judge: shell プラグインでコマンド出力 (JSON) を取得
+# agent: evorch.config.yaml の "issues-to-claude" ポリシーが claude-code を起動
 schedule: "0 9 * * *"
 timezone: "Asia/Tokyo"
 
 judge:
   plugin: "shell"
   config:
+    # gh コマンドで open な issue を取得 (空配列なら fired=false)
     command: "gh issue list --repo owner/repo --state open --json number,title,labels,createdAt --limit 10"
     timeout: 30
 

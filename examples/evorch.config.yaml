@@ -7,22 +7,62 @@ log:
 jobs_dir: "./jobs"
 
 policies:
-  - name: "new-issues-to-claude"
+  # GitHub Issue を検出したら claude-code で優先度分析
+  - name: "issues-to-claude"
     match:
       type: "new_issues_found"
-      severity: ["medium", "high"]
+      severity: ["medium", "high", "critical"]
     agent:
       plugin: "claude-code"
       config:
         prompt_template: |
-          以下の新規issueを確認し、優先度と対応方針を提案してください:
+          以下の新規 GitHub Issue を確認し、優先度と対応方針を提案してください:
           {{payload}}
         workdir: "/tmp/evorch-workdir"
         timeout: 300
 
+  # ディスク使用率が高い場合に macOS 通知を送る
+  - name: "disk-alert-notify"
+    match:
+      type: "disk_usage_high"
+      severity: ["high", "critical"]
+    agent:
+      plugin: "notify"
+      config:
+        title: "Evorch: ディスク警告"
+        message: "使用率が閾値を超えました: {{payload.usage}}%"
+        sound: "Basso"
+
+  # CI 失敗を検出したら codex で自動修正を試みる
+  - name: "ci-failure-to-codex"
+    match:
+      type: "ci_failed"
+      severity: ["high"]
+    agent:
+      plugin: "codex"
+      config:
+        prompt_template: |
+          以下の CI 失敗ログを解析し、原因を特定して修正してください:
+          {{payload.log}}
+        model: "o4-mini"
+        approval_mode: "auto-edit"
+        workdir: "/path/to/your/repo"
+        timeout: 600
+
+  # ログ集計結果をファイルに書き出す
+  - name: "log-summary-to-file"
+    match:
+      type: "log_summary_ready"
+    agent:
+      plugin: "shell"
+      config:
+        command: "echo '{{payload}}' >> /tmp/evorch-log-summary.jsonl"
+        timeout: 10
+
 execution:
   max_concurrent: 3
   default_timeout: 120
+  max_dispatch_depth: 10
   retry:
     max_attempts: 2
     backoff: "exponential"

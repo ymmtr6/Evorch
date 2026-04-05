@@ -1,0 +1,28 @@
+# 5 分ごとにディスク使用率を確認し、80% 超なら通知する
+# judge: shell で使用率を取得して閾値判定
+# agent: evorch.config.yaml の "disk-alert-notify" ポリシーが notify を起動
+schedule: "*/5 * * * *"
+
+judge:
+  plugin: "shell"
+  config:
+    # 使用率が 80% 超なら JSON を出力して exit 0 (fired=true)
+    # それ以外は何も出力せず exit 1 (fired=false)
+    command: |
+      usage=$(df / | awk 'NR==2 {gsub(/%/,""); print $5}')
+      if [ "$usage" -gt 80 ]; then
+        echo "{\"usage\": $usage}"
+      else
+        exit 1
+      fi
+    timeout: 10
+
+event:
+  type: "disk_usage_high"
+  severity: "high"
+  labels:
+    host: "localhost"
+
+dedup:
+  fingerprint: "disk:localhost"
+  suppress_for: "30m"
