@@ -32,7 +32,13 @@ export function registerValidate(program: Command): void {
         console.log(`✓ ジョブ数: ${jobNames.length}`);
         for (const name of jobNames) {
           const job = config.jobs[name];
-          console.log(`  - ${name} (${job.schedule}) judge:${job.judge.plugin}`);
+          if (job.steps) {
+            console.log(`  - ${name} (${job.schedule}) steps:${job.steps.length}`);
+          } else if (job.judge) {
+            console.log(`  - ${name} (${job.schedule}) judge:${job.judge.plugin}`);
+          } else {
+            console.log(`  - ${name} (${job.schedule}) [invalid]`);
+          }
         }
         console.log(`✓ ポリシー数: ${config.policies.length}`);
         for (const p of config.policies) {
