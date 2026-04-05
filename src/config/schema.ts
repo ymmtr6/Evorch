@@ -49,6 +49,12 @@ const PolicySchema = z.object({
   agent: AgentConfigSchema,
 });
 
+/** ポリシーファイルスキーマ（個別YAMLファイル用、name はファイル名から取得） */
+export const PolicyFileSchema = z.object({
+  match: PolicyMatchSchema,
+  agent: AgentConfigSchema,
+});
+
 const RetrySchema = z.object({
   max_attempts: z.number().default(2),
   backoff: z.enum(["fixed", "exponential"]).default("exponential"),
@@ -78,6 +84,7 @@ export const MainConfigSchema = z.object({
     .default({}),
   jobs_dir: z.string().default("./jobs"),
   jobs: z.record(z.string(), JobSchema).default({}),
+  policies_dir: z.string().default("./policies"),
   policies: z.array(PolicySchema).default([]),
   execution: ExecutionSchema.default({}),
 });
@@ -86,6 +93,7 @@ export type JobConfig = z.infer<typeof JobSchema>;
 export type PolicyConfig = z.infer<typeof PolicySchema>;
 export type PolicyMatch = z.infer<typeof PolicyMatchSchema>;
 export type MainConfig = z.infer<typeof MainConfigSchema>;
+export type PolicyFileConfig = z.infer<typeof PolicyFileSchema>;
 
 /** ジョブ名をキーにした最終的な統合設定 */
 export interface Config extends MainConfig {

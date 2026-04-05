@@ -14,6 +14,7 @@ import { registerInit } from "./init.js";
 export const DEFAULT_CONFIG_DIR = join(homedir(), ".config", "evorch");
 export const DEFAULT_CONFIG_PATH = join(DEFAULT_CONFIG_DIR, "config.yaml");
 export const DEFAULT_JOBS_DIR = join(DEFAULT_CONFIG_DIR, "jobs");
+export const DEFAULT_POLICIES_DIR = join(DEFAULT_CONFIG_DIR, "policies");
 export const DEFAULT_PID_PATH = join(DEFAULT_CONFIG_DIR, "evorch.pid");
 
 export function createCli(): Command {
