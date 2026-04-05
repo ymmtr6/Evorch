@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { runMigrations } from "../src/store/migrations.js";
 import { Repository } from "../src/store/repository.js";
 import { EventBus } from "../src/core/event-bus.js";
@@ -39,12 +39,12 @@ describe("reasonToOutcome", () => {
 // --- AgentResult の reason/outcome 保存テスト ---
 
 describe("Repository: AgentResult reason/outcome", () => {
-  let db: Database.Database;
+  let db: DatabaseSync;
   let repo: Repository;
 
   beforeEach(() => {
-    db = new Database(":memory:");
-    db.pragma("foreign_keys = ON");
+    db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
     runMigrations(db);
     repo = new Repository(db);
 
@@ -115,13 +115,13 @@ function makeLogger(): Logger {
 }
 
 describe("EventBus: dispatchDepth", () => {
-  let db: Database.Database;
+  let db: DatabaseSync;
   let repo: Repository;
   let logger: Logger;
 
   beforeEach(() => {
-    db = new Database(":memory:");
-    db.pragma("foreign_keys = ON");
+    db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
     runMigrations(db);
     repo = new Repository(db);
     logger = makeLogger();
