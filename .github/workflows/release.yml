@@ -1,98 +1,109 @@
-name: Release
+name: Release & Update Homebrew
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build (${{ matrix.arch }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-14
-            arch: arm64
-          - os: macos-13
-            arch: x86_64
-    runs-on: ${{ matrix.os }}
+  check-skip:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    steps:
+      - id: check
+        run: |
+          if echo "${{ github.event.head_commit.message }}" | grep -q "^chore: bump version"; then
+            echo "should_skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
+  build-and-test:
+    needs: check-skip
+    if: needs.check-skip.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  release:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
+          cache: 'npm'
 
-      - name: ビルドと依存インストール
+      - name: Configure git
         run: |
-          npm ci
-          npm run build
-          npm prune --omit=dev
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: アーカイブ作成
+      - name: Bump patch version
+        id: bump
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          ARCHIVE="evorch-${VERSION}-darwin-${{ matrix.arch }}.tar.gz"
-          tar -czf "${ARCHIVE}" dist node_modules package.json
-          SHA256=$(shasum -a 256 "${ARCHIVE}" | cut -d' ' -f1)
-          echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_ENV
-          echo "SHA256=${SHA256}" >> $GITHUB_ENV
-          echo "${SHA256}  ${ARCHIVE}" > "${ARCHIVE}.sha256"
-          echo "### darwin-${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
-          echo "SHA256: \`${SHA256}\`" >> $GITHUB_STEP_SUMMARY
+          CURRENT=$(node -p "require('./package.json').version")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          npm version "$NEW_VERSION" --no-git-tag-version
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: evorch-darwin-${{ matrix.arch }}
-          path: |
-            ${{ env.ARCHIVE }}
-            ${{ env.ARCHIVE }}.sha256
-
-  release:
-    name: Create Release
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-
-      - name: SHA256 サマリー出力
+      - name: Commit version bump
         run: |
-          echo "## Release Assets" >> $GITHUB_STEP_SUMMARY
-          for f in *.sha256; do
-            echo "- $(cat $f)" >> $GITHUB_STEP_SUMMARY
-          done
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.version }}"
+          git push origin main
 
-      - name: GitHub Release 作成
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            evorch-*.tar.gz
-            evorch-*.sha256
-          generate_release_notes: true
-
-      - name: SHA256 値を抽出
-        id: sha256
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          echo "arm64=$(awk '{print $1}' evorch-*-darwin-arm64.tar.gz.sha256)" >> $GITHUB_OUTPUT
-          echo "x86_64=$(awk '{print $1}' evorch-*-darwin-x86_64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+          git tag "${{ steps.bump.outputs.tag }}"
+          git push origin "${{ steps.bump.outputs.tag }}"
+          gh release create "${{ steps.bump.outputs.tag }}" \
+            --title "${{ steps.bump.outputs.tag }}" \
+            --generate-notes
 
-      - name: homebrew-evorch に dispatch
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          repository: ymmtr6/homebrew-evorch
-          event-type: evorch-release
-          client-payload: |
-            {
-              "version": "${{ github.ref_name }}",
-              "arm64_sha256": "${{ steps.sha256.outputs.arm64 }}",
-              "x86_64_sha256": "${{ steps.sha256.outputs.x86_64 }}"
-            }
+      - name: Get tarball SHA256
+        id: sha
+        run: |
+          SHA=$(curl -sL "https://github.com/${{ github.repository }}/archive/refs/tags/${{ steps.bump.outputs.tag }}.tar.gz" | shasum -a 256 | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/ymmtr6/homebrew-evorch.git /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          sed -i \
+            -e 's|url ".*"|url "https://github.com/ymmtr6/Evorch/archive/refs/tags/${{ steps.bump.outputs.tag }}.tar.gz"|' \
+            -e 's|sha256 ".*"|sha256 "${{ steps.sha.outputs.sha256 }}"|' \
+            Formula/evorch.rb
+
+          git add Formula/evorch.rb
+          git commit -m "Update evorch to ${{ steps.bump.outputs.version }}"
+          git push origin main
