@@ -14,6 +14,17 @@ const baseEvent: EvOrchEvent = {
   run_id: "run-001",
 };
 
+const eventWithPayload: EvOrchEvent = {
+  ...baseEvent,
+  payload: {
+    error_count: 15,
+    message: "Deployment failed",
+    details: {
+      retry_count: 3,
+    },
+  },
+};
+
 describe("matchEvent", () => {
   it("type が一致する場合は true", () => {
     expect(matchEvent(baseEvent, { type: "threshold_exceeded" })).toBe(true);
@@ -59,5 +70,77 @@ describe("matchEvent", () => {
         labels: { env: "prod" },
       }),
     ).toBe(false);
+  });
+
+  describe("condition 条件式", () => {
+    it("payload フィールドの比較ができる", () => {
+      expect(
+        matchEvent(eventWithPayload, { condition: "payload.error_count > 10" }),
+      ).toBe(true);
+
+      expect(
+        matchEvent(eventWithPayload, { condition: "payload.error_count > 20" }),
+      ).toBe(false);
+    });
+
+    it("payload フィールドの等価比較ができる", () => {
+      expect(
+        matchEvent(eventWithPayload, { condition: "payload.message == 'Deployment failed'" }),
+      ).toBe(true);
+
+      expect(
+        matchEvent(eventWithPayload, { condition: "payload.message == 'Success'" }),
+      ).toBe(false);
+    });
+
+    it("ネストした payload フィールドにアクセスできる", () => {
+      expect(
+        matchEvent(eventWithPayload, { condition: "payload.details.retry_count == 3" }),
+      ).toBe(true);
+    });
+
+    it("labels との複合条件ができる", () => {
+      expect(
+        matchEvent(eventWithPayload, {
+          condition: "payload.error_count > 10 && labels.env == 'prod'",
+        }),
+      ).toBe(true);
+
+      expect(
+        matchEvent(eventWithPayload, {
+          condition: "payload.error_count > 10 && labels.env == 'staging'",
+        }),
+      ).toBe(false);
+    });
+
+    it("OR 条件ができる", () => {
+      expect(
+        matchEvent(eventWithPayload, {
+          condition: "payload.error_count < 5 || payload.error_count > 10",
+        }),
+      ).toBe(true);
+
+      expect(
+        matchEvent(eventWithPayload, {
+          condition: "payload.error_count < 5 || payload.error_count < 10",
+        }),
+      ).toBe(false);
+    });
+
+    it("type と condition の組み合わせ", () => {
+      expect(
+        matchEvent(eventWithPayload, {
+          type: "threshold_exceeded",
+          condition: "payload.error_count > 10",
+        }),
+      ).toBe(true);
+    });
+
+    it("安全でない条件式は評価されない", () => {
+      // eval や Function などの危険なコードは評価されない
+      expect(
+        matchEvent(eventWithPayload, { condition: "eval('1+1')" }),
+      ).toBe(false);
+    });
   });
 });
