@@ -52,7 +52,7 @@ function printList(results: AgentResult[], showOutput: boolean): void {
     padEnd("RESULT ID", 28) +
       padEnd("POLICY", 24) +
       padEnd("PLUGIN", 16) +
-      padEnd("STATUS", 10) +
+      padEnd("REASON", 10) +
       padEnd("DURATION", 10) +
       "STARTED",
   );
