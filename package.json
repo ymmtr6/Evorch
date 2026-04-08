@@ -1,6 +1,6 @@
 {
   "name": "evorch",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Event-driven orchestration CLI",
   "type": "module",
   "engines": {
