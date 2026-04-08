@@ -1,6 +1,9 @@
 import pino from "pino";
 
-export function createLogger(level: string = "info"): pino.Logger {
+export function createLogger(level: string = "info", logFile?: string): pino.Logger {
+  if (logFile) {
+    return pino({ level }, pino.destination(logFile));
+  }
   return pino({
     level,
     transport: {
