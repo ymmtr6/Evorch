@@ -1,0 +1,28 @@
+# ログのエラー監視とアラート
+# 指定したログファイルやサービスのエラーを監視
+
+schedule: "*/5 * * * *"  # 5分ごと
+timezone: "Asia/Tokyo"
+
+judge:
+  plugin: shell
+  config:
+    command: |
+      # 直近5分のエラーログを確認
+      if [ -f "${LOG_FILE:-/var/log/app.log}" ]; then
+        ERROR_COUNT=$(find "${LOG_FILE}" -mmin -5 -exec grep -c "ERROR\|Error\|error" {} \; 2>/dev/null || echo "0")
+        if [ "$ERROR_COUNT" -gt 0 ]; then
+          tail -n 50 "${LOG_FILE}" | grep -E "ERROR|Error|error" | tail -n 10
+        fi
+      else
+        echo "Log file not found: ${LOG_FILE:-/var/log/app.log}"
+      fi
+    timeout: 15
+
+event:
+  type: "error_detected"
+  severity: "high"
+
+dedup:
+  fingerprint: "error-monitor:${LOG_FILE:-/var/log/app.log}"
+  suppress_for: "15m"

@@ -1,0 +1,22 @@
+# Slack メッセージのダイジェスト生成
+# 指定チャンネルのメッセージを定期収集し、ダイジェストを生成
+
+schedule: "0 12,18 * * 1-5"  # 平日 12:00, 18:00
+timezone: "Asia/Tokyo"
+
+judge:
+  plugin: shell
+  config:
+    command: |
+      # Slack API を使用してメッセージを取得
+      # SLACK_BOT_TOKEN と SLACK_CHANNEL_ID を環境変数で設定
+      curl -s -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+        "https://slack.com/api/conversations.history?channel=${SLACK_CHANNEL_ID}&limit=50" | \
+        jq -r '.messages[] | select(.ts > (now - 21600 | tostring)) | .text' 2>/dev/null || echo "No messages"
+    timeout: 30
+
+event:
+  type: "slack_digest"
+  severity: "low"
+
+# 重複防止なし（1日2回実行）

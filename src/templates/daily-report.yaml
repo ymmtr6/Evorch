@@ -1,0 +1,18 @@
+# 日次レポートの自動生成
+# 指定時刻に日次レポートを生成する
+
+schedule: "0 18 * * 1-5"  # 平日 18:00
+timezone: "Asia/Tokyo"
+
+judge:
+  plugin: shell
+  config:
+    command: |
+      echo "daily_report_trigger"
+    timeout: 5
+
+event:
+  type: "daily_report"
+  severity: "low"
+
+# 重複防止なし（毎日実行）

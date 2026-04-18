@@ -1,0 +1,25 @@
+# PR 作成時の自動レビュー依頼
+# 新規 PR を監視し、Claude Code でコードレビューを行う
+
+schedule: "*/10 * * * *"  # 10分ごと
+timezone: "Asia/Tokyo"
+
+judge:
+  plugin: shell
+  config:
+    command: |
+      gh pr list \
+        --repo ${GITHUB_REPO} \
+        --state open \
+        --draft false \
+        --json number,title,author,createdAt \
+        --limit 10
+    timeout: 30
+
+event:
+  type: "github_pr_found"
+  severity: "medium"
+
+dedup:
+  fingerprint: "github-pr-review:${GITHUB_REPO}"
+  suppress_for: "1h"

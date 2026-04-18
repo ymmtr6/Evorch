@@ -1,0 +1,24 @@
+# GitHub Issue の定期監視と AI 分析
+# 新規 Issue を定期的に確認し、Claude Code で優先度を分析する
+
+schedule: "0 9 * * 1-5"  # 平日 9:00
+timezone: "Asia/Tokyo"
+
+judge:
+  plugin: shell
+  config:
+    command: |
+      gh issue list \
+        --repo ${GITHUB_REPO} \
+        --state open \
+        --json number,title,labels,createdAt \
+        --limit 20
+    timeout: 30
+
+event:
+  type: "github_issues_found"
+  severity: "medium"
+
+dedup:
+  fingerprint: "github-issues:${GITHUB_REPO}"
+  suppress_for: "8h"

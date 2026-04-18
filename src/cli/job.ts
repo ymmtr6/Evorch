@@ -7,8 +7,12 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { basename, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { DEFAULT_CONFIG_DIR, DEFAULT_JOBS_DIR } from "./index.js";
+import {
+  getTemplate,
+  listTemplates,
+} from "../templates/index.js";
 
 export function registerJob(program: Command): void {
   const job = program
@@ -84,8 +88,55 @@ export function registerJob(program: Command): void {
   // 初期化コマンド（設定ディレクトリとデフォルト設定を作成）
   job
     .command("init")
-    .description("設定ディレクトリを初期化")
-    .action(() => {
+    .description("設定ディレクトリを初期化、またはテンプレートからジョブを作成")
+    .option("--list", "テンプレート一覧を表示")
+    .option("-t, --template <name>", "テンプレート名を指定してジョブを作成")
+    .option("-o, --output <path>", "出力先パス（テンプレート使用時）")
+    .action((options: { list?: boolean; template?: string; output?: string }) => {
+      // テンプレート一覧表示
+      if (options.list) {
+        console.log("利用可能なテンプレート:\n");
+        const templates = listTemplates();
+        for (const t of templates) {
+          console.log(`  ${t.name}`);
+          console.log(`    ${t.description}\n`);
+        }
+        return;
+      }
+
+      // テンプレートからジョブ作成
+      if (options.template) {
+        const template = getTemplate(options.template);
+        if (!template) {
+          console.error(`テンプレートが見つかりません: ${options.template}`);
+          console.error("利用可能なテンプレートを確認するには --list を使用してください");
+          process.exit(1);
+        }
+
+        // 出力先を決定
+        const outputPath = options.output
+          ? resolve(options.output)
+          : resolve(DEFAULT_JOBS_DIR, `${template.name}.yaml`);
+
+        // 出力ディレクトリを作成
+        const outputDir = dirname(outputPath);
+        if (!existsSync(outputDir)) {
+          mkdirSync(outputDir, { recursive: true });
+        }
+
+        // ファイル存在チェック
+        if (existsSync(outputPath)) {
+          console.error(`ファイルが既に存在します: ${outputPath}`);
+          process.exit(1);
+        }
+
+        writeFileSync(outputPath, template.content);
+        console.log(`テンプレートからジョブを作成しました: ${outputPath}`);
+        console.log(`テンプレート: ${template.name} (${template.description})`);
+        return;
+      }
+
+      // デフォルト: 設定ディレクトリの初期化
       if (!existsSync(DEFAULT_CONFIG_DIR)) {
         mkdirSync(DEFAULT_CONFIG_DIR, { recursive: true });
       }
