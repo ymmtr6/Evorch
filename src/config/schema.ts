@@ -18,14 +18,36 @@ const EventTemplateSchema = z.object({
   labels: z.record(z.string()).default({}),
 });
 
+const AgentConfigSchema = z.object({
+  plugin: z.string(),
+  config: z.record(z.unknown()).default({}),
+});
+
+/** ステップ定義スキーマ */
+const StepSchema = z.object({
+  name: z.string(),
+  judge: JudgeConfigSchema.optional(),
+  agent: AgentConfigSchema.optional(),
+  condition: z.string().optional(),
+});
+
 /** ジョブ定義スキーマ（個別YAMLファイル用） */
 export const JobSchema = z.object({
   schedule: z.string(),
   timezone: z.string().optional(),
-  judge: JudgeConfigSchema,
-  event: EventTemplateSchema,
+  // 従来の単一 judge/agent 形式（後方互換性）
+  judge: JudgeConfigSchema.optional(),
+  event: EventTemplateSchema.optional(),
   dedup: DedupSchema.optional(),
-});
+  // 新しいステップチェーン形式
+  steps: z.array(StepSchema).optional(),
+  output: EventTemplateSchema.optional(),
+}).refine(
+  (data) => (data.judge && data.event) || data.steps,
+  {
+    message: "judge + event または steps のいずれかが必要です",
+  }
+);
 
 const PolicyMatchSchema = z.object({
   type: z.string().optional(),
@@ -36,11 +58,6 @@ const PolicyMatchSchema = z.object({
     ])
     .optional(),
   labels: z.record(z.string()).optional(),
-});
-
-const AgentConfigSchema = z.object({
-  plugin: z.string(),
-  config: z.record(z.unknown()).default({}),
 });
 
 const PolicySchema = z.object({
