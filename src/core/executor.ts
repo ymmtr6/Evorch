@@ -107,6 +107,11 @@ export class Executor {
     } catch (err) {
       this.store.recordRunComplete(runId, "failed", undefined, undefined, String(err));
       this.logger.error({ job: jobName, run_id: runId, err }, "ジョブ実行失敗");
+
+      // on_failure ハンドラーを実行
+      if (jobConfig.on_failure) {
+        await this.runFailureHandler(jobConfig, jobName, runId, String(err));
+      }
     } finally {
       this.running.delete(runId);
       this.concurrentCount--;
@@ -124,6 +129,88 @@ export class Executor {
 
   get activeCount(): number {
     return this.concurrentCount;
+  }
+
+  /** エラーハンドラーを実行 */
+  private async runFailureHandler(
+    jobConfig: JobConfig,
+    jobName: string,
+    runId: string,
+    errorMessage: string,
+  ): Promise<void> {
+    const onFailure = jobConfig.on_failure;
+    if (!onFailure) return;
+
+    this.logger.info({ job: jobName, run_id: runId }, "エラーハンドラー実行開始");
+
+    try {
+      // テンプレート変数を展開
+      const context = {
+        job_name: jobName,
+        run_id: runId,
+        error: errorMessage,
+      };
+
+      if (onFailure.agent) {
+        // エージェントを実行
+        const config = this.expandTemplates(onFailure.agent.config, context);
+        await this.pluginRuntime.runAgent(onFailure.agent.plugin, config, {
+          event_id: `failure:${jobName}:${runId}`,
+          source: jobName,
+          type: "job_failure",
+          severity: "high",
+          fingerprint: `failure:${jobName}:${runId}`,
+          payload: { error: errorMessage, job_name: jobName, run_id: runId },
+          labels: {},
+          created_at: new Date().toISOString(),
+          run_id: runId,
+        });
+      }
+
+      if (onFailure.command) {
+        // シェルコマンドを実行
+        const expandedCommand = this.expandTemplateString(onFailure.command, context);
+        const { execFile } = await import("node:child_process");
+        await new Promise<void>((resolve, reject) => {
+          execFile("sh", ["-c", expandedCommand], { timeout: 60000 }, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+
+      this.logger.info({ job: jobName, run_id: runId }, "エラーハンドラー完了");
+    } catch (handlerErr) {
+      this.logger.error(
+        { job: jobName, run_id: runId, err: handlerErr },
+        "エラーハンドラー実行失敗",
+      );
+    }
+  }
+
+  /** 設定オブジェクト内のテンプレートを展開 */
+  private expandTemplates(
+    config: Record<string, unknown>,
+    context: Record<string, string>,
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(config)) {
+      if (typeof value === "string") {
+        result[key] = this.expandTemplateString(value, context);
+      } else if (typeof value === "object" && value !== null) {
+        result[key] = this.expandTemplates(value as Record<string, unknown>, context);
+      } else {
+        result[key] = value;
+      }
+    }
+    return result;
+  }
+
+  /** 文字列内のテンプレート変数を展開 */
+  private expandTemplateString(template: string, context: Record<string, string>): string {
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+      return context[key] ?? `{{${key}}}`;
+    });
   }
 }
 

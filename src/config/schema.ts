@@ -18,15 +18,6 @@ const EventTemplateSchema = z.object({
   labels: z.record(z.string()).default({}),
 });
 
-/** ジョブ定義スキーマ（個別YAMLファイル用） */
-export const JobSchema = z.object({
-  schedule: z.string(),
-  timezone: z.string().optional(),
-  judge: JudgeConfigSchema,
-  event: EventTemplateSchema,
-  dedup: DedupSchema.optional(),
-});
-
 const PolicyMatchSchema = z.object({
   type: z.string().optional(),
   severity: z
@@ -41,6 +32,21 @@ const PolicyMatchSchema = z.object({
 const AgentConfigSchema = z.object({
   plugin: z.string(),
   config: z.record(z.unknown()).default({}),
+});
+
+const OnFailureSchema = z.object({
+  agent: AgentConfigSchema.optional(),
+  command: z.string().optional(),
+});
+
+/** ジョブ定義スキーマ（個別YAMLファイル用） */
+export const JobSchema = z.object({
+  schedule: z.string(),
+  timezone: z.string().optional(),
+  judge: JudgeConfigSchema,
+  event: EventTemplateSchema,
+  dedup: DedupSchema.optional(),
+  on_failure: OnFailureSchema.optional(),
 });
 
 const PolicySchema = z.object({
