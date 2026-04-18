@@ -36,6 +36,7 @@ const PolicyMatchSchema = z.object({
     ])
     .optional(),
   labels: z.record(z.string()).optional(),
+  condition: z.string().optional(),
 });
 
 const AgentConfigSchema = z.object({
